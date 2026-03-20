@@ -29,6 +29,17 @@ footer {visibility: hidden;}
 [data-testid="stAppToolbar"] {display: none;}
 [data-testid="stActionButtonIcon"] {display: none;}
 [data-testid="stActionButton"] {display: none;}
+[data-testid="stAppViewerBadge"] {display: none;}
+.stAppViewerBadge {display: none;}
+.viewerBadge {display: none;}
+button[aria-label="Manage app"] {display: none;}
+button[aria-label="Deploy"] {display: none;}
+button[aria-label="Share"] {display: none;}
+a[aria-label="Manage app"] {display: none;}
+a[aria-label="Deploy"] {display: none;}
+a[aria-label="Share"] {display: none;}
+.stApp a[style*="position: fixed"][style*="bottom"] {display: none !important;}
+.stApp button[style*="position: fixed"][style*="bottom"] {display: none !important;}
 [data-testid="stSidebar"] {display: none;}
 section.main > div {padding-top: 1rem;}
 </style>
