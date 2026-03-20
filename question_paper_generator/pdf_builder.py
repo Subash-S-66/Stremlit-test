@@ -28,7 +28,7 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
         fontName='Helvetica-Bold',
         fontSize=18,
         alignment=TA_CENTER,
-        spaceAfter=12
+        spaceAfter=15
     )
 
     meta_style = ParagraphStyle(
@@ -37,7 +37,7 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
         fontName='Helvetica',
         fontSize=12,
         alignment=TA_CENTER,
-        spaceAfter=20
+        spaceAfter=25
     )
 
     section_heading_style = ParagraphStyle(
@@ -46,18 +46,18 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
         fontName='Helvetica-Bold',
         fontSize=14,
         alignment=TA_LEFT,
-        spaceAfter=10,
-        spaceBefore=15
+        spaceAfter=12,
+        spaceBefore=20
     )
 
     question_style = ParagraphStyle(
         'QuestionStyle',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=11,
+        fontSize=12,
         alignment=TA_LEFT,
-        spaceAfter=8,
-        leading=14
+        spaceAfter=10,
+        leading=16
     )
 
     story = []
@@ -69,9 +69,9 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
     distribution_for_marks = {mark: len(qs) for mark, qs in questions_data.items()}
     total_marks = calculate_total_marks(distribution_for_marks)
 
-    meta_info = f"<b>Subject:</b> {subject} &nbsp;&nbsp;&nbsp; <b>Topic:</b> {topic}<br/><b>Total Marks:</b> {total_marks}"
+    meta_info = f"<b>Subject:</b> {subject} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b>Topic:</b> {topic}<br/><b>Total Marks:</b> {total_marks}"
     story.append(Paragraph(meta_info, meta_style))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 15))
 
     # Sections (Ascending Order)
     # Filter only marks that have questions generated
@@ -83,7 +83,7 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
 
         # Section Heading: e.g., Part A (1 Mark) / Part B (2 Marks)
         mark_label = "Mark" if mark == 1 else "Marks"
-        heading_text = f"Part {section_letter} ({mark} {mark_label})"
+        heading_text = f"<b>Part {section_letter} ({mark} {mark_label})</b>"
         story.append(Paragraph(heading_text, section_heading_style))
 
         # Questions properly formatted with restarted numbering
