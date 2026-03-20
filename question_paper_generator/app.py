@@ -21,61 +21,7 @@ def init_session_state():
     if "is_generating" not in st.session_state:
         st.session_state.is_generating = False
 
-    # Initialize mix percentages
-    if "easy_pct" not in st.session_state:
-        st.session_state.easy_pct = 34
-    if "medium_pct" not in st.session_state:
-        st.session_state.medium_pct = 33
-    if "hard_pct" not in st.session_state:
-        st.session_state.hard_pct = 33
-
 init_session_state()
-
-def balance_percentages(changed_key):
-    """
-    Auto-balances the three difficulty percentages so they always sum exactly to 100.
-    When one slider is moved, the remaining percentage is distributed between the other two.
-    """
-    total = st.session_state.easy_pct + st.session_state.medium_pct + st.session_state.hard_pct
-    if total == 100:
-        return
-
-    keys = ["easy_pct", "medium_pct", "hard_pct"]
-    keys.remove(changed_key)
-
-    key1, key2 = keys[0], keys[1]
-
-    val1 = st.session_state[key1]
-    val2 = st.session_state[key2]
-
-    # We need to distribute this much diff to key1 and key2
-    remaining_needed = 100 - st.session_state[changed_key]
-
-    if remaining_needed == 0:
-        st.session_state[key1] = 0
-        st.session_state[key2] = 0
-    elif val1 + val2 == 0:
-        # If both are 0 but we need to distribute remaining, split evenly
-        half = remaining_needed // 2
-        st.session_state[key1] = half
-        st.session_state[key2] = remaining_needed - half
-    else:
-        # Distribute proportionally based on their current relative weights
-        ratio = val1 / (val1 + val2)
-        new_val1 = int(round(remaining_needed * ratio))
-        new_val2 = remaining_needed - new_val1
-
-        st.session_state[key1] = new_val1
-        st.session_state[key2] = new_val2
-
-def update_easy():
-    balance_percentages("easy_pct")
-
-def update_medium():
-    balance_percentages("medium_pct")
-
-def update_hard():
-    balance_percentages("hard_pct")
 
 # Custom CSS for better UI
 st.markdown("""
@@ -194,17 +140,22 @@ with st.container():
 
     easy_pct, medium_pct, hard_pct = 0, 0, 0
     if difficulty == "Mix":
-        st.info("Adjust the sliders below to set the difficulty distribution. The sliders auto-balance to keep the total exactly at 100%.")
+        st.info("Adjust the sliders below to set the difficulty distribution. Total must equal 100%.")
         col_e, col_m, col_h = st.columns(3)
 
         with col_e:
-            easy_pct = st.slider("Easy %", min_value=0, max_value=100, key="easy_pct", on_change=update_easy)
+            easy_pct = st.slider("Easy %", min_value=0, max_value=100, value=34, step=1)
         with col_m:
-            medium_pct = st.slider("Medium %", min_value=0, max_value=100, key="medium_pct", on_change=update_medium)
+            medium_pct = st.slider("Medium %", min_value=0, max_value=100, value=33, step=1)
         with col_h:
-            hard_pct = st.slider("Hard %", min_value=0, max_value=100, key="hard_pct", on_change=update_hard)
+            hard_pct = st.slider("Hard %", min_value=0, max_value=100, value=33, step=1)
 
         current_pct = easy_pct + medium_pct + hard_pct
+
+        if current_pct < 100:
+             st.warning(f"⚠️ Current sum is **{current_pct}%**. Please adjust the sliders to use the remaining **{100 - current_pct}%**.")
+        elif current_pct > 100:
+             st.warning(f"⚠️ Current sum is **{current_pct}%**. It cannot exceed 100%.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
