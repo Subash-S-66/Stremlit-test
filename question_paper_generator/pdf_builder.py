@@ -1,8 +1,8 @@
 import os
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
 from utils import get_section_letter, calculate_total_marks
 
@@ -46,8 +46,18 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
         fontName='Helvetica-Bold',
         fontSize=14,
         alignment=TA_LEFT,
-        spaceAfter=12,
-        spaceBefore=20
+        spaceAfter=0, # Removed spaceAfter since we'll handle spacing outside the table
+        spaceBefore=0 # Removed spaceBefore since we'll handle spacing outside the table
+    )
+
+    section_math_style = ParagraphStyle(
+        'SectionMathStyle',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=14,
+        alignment=TA_RIGHT,
+        spaceAfter=0,
+        spaceBefore=0
     )
 
     question_style = ParagraphStyle(
@@ -80,11 +90,31 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
     for section_idx, mark in enumerate(active_marks):
         section_letter = get_section_letter(section_idx)
         questions = questions_data[mark]
+        num_questions = len(questions)
+        section_total_marks = num_questions * mark
+
+        story.append(Spacer(1, 15)) # Top margin for section
 
         # Section Heading: e.g., Part A (1 Mark) / Part B (2 Marks)
         mark_label = "Mark" if mark == 1 else "Marks"
-        heading_text = f"<b>Part {section_letter} ({mark} {mark_label})</b>"
-        story.append(Paragraph(heading_text, section_heading_style))
+        heading_left = Paragraph(f"<b>Part {section_letter} ({mark} {mark_label})</b>", section_heading_style)
+        heading_right = Paragraph(f"<b>{num_questions} x {mark} = {section_total_marks}</b>", section_math_style)
+
+        # Using a table to align heading left and math right
+        # doc.width calculates the available width minus margins
+        avail_width = letter[0] - 100
+        header_table = Table(
+            [[heading_left, heading_right]],
+            colWidths=[avail_width * 0.7, avail_width * 0.3]
+        )
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ]))
+
+        story.append(header_table)
 
         # Questions properly formatted with restarted numbering
         for q_idx, question_text in enumerate(questions, start=1):
