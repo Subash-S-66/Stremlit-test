@@ -31,21 +31,51 @@ def init_session_state():
 
 init_session_state()
 
+def balance_percentages(changed_key):
+    """
+    Auto-balances the three difficulty percentages so they always sum exactly to 100.
+    When one slider is moved, the remaining percentage is distributed between the other two.
+    """
+    total = st.session_state.easy_pct + st.session_state.medium_pct + st.session_state.hard_pct
+    if total == 100:
+        return
+
+    keys = ["easy_pct", "medium_pct", "hard_pct"]
+    keys.remove(changed_key)
+
+    key1, key2 = keys[0], keys[1]
+
+    val1 = st.session_state[key1]
+    val2 = st.session_state[key2]
+
+    # We need to distribute this much diff to key1 and key2
+    remaining_needed = 100 - st.session_state[changed_key]
+
+    if remaining_needed == 0:
+        st.session_state[key1] = 0
+        st.session_state[key2] = 0
+    elif val1 + val2 == 0:
+        # If both are 0 but we need to distribute remaining, split evenly
+        half = remaining_needed // 2
+        st.session_state[key1] = half
+        st.session_state[key2] = remaining_needed - half
+    else:
+        # Distribute proportionally based on their current relative weights
+        ratio = val1 / (val1 + val2)
+        new_val1 = int(round(remaining_needed * ratio))
+        new_val2 = remaining_needed - new_val1
+
+        st.session_state[key1] = new_val1
+        st.session_state[key2] = new_val2
+
 def update_easy():
-    # Enforce limit: easy can't be more than what's left
-    remaining = 100 - (st.session_state.medium_pct + st.session_state.hard_pct)
-    if st.session_state.easy_pct > remaining:
-        st.session_state.easy_pct = remaining
+    balance_percentages("easy_pct")
 
 def update_medium():
-    remaining = 100 - (st.session_state.easy_pct + st.session_state.hard_pct)
-    if st.session_state.medium_pct > remaining:
-        st.session_state.medium_pct = remaining
+    balance_percentages("medium_pct")
 
 def update_hard():
-    remaining = 100 - (st.session_state.easy_pct + st.session_state.medium_pct)
-    if st.session_state.hard_pct > remaining:
-        st.session_state.hard_pct = remaining
+    balance_percentages("hard_pct")
 
 # Custom CSS for better UI
 st.markdown("""
@@ -164,27 +194,17 @@ with st.container():
 
     easy_pct, medium_pct, hard_pct = 0, 0, 0
     if difficulty == "Mix":
-        st.info("Adjust the sliders below to set the difficulty distribution. The maximum value for each slider adjusts based on the other two sliders.")
+        st.info("Adjust the sliders below to set the difficulty distribution. The sliders auto-balance to keep the total exactly at 100%.")
         col_e, col_m, col_h = st.columns(3)
 
-        # Calculate max allowed for each based on current state of the others
-        max_e = 100 - (st.session_state.medium_pct + st.session_state.hard_pct)
-        max_m = 100 - (st.session_state.easy_pct + st.session_state.hard_pct)
-        max_h = 100 - (st.session_state.easy_pct + st.session_state.medium_pct)
-
         with col_e:
-            easy_pct = st.slider("Easy %", min_value=0, max_value=max_e if max_e > 0 else 0, key="easy_pct", on_change=update_easy)
+            easy_pct = st.slider("Easy %", min_value=0, max_value=100, key="easy_pct", on_change=update_easy)
         with col_m:
-            medium_pct = st.slider("Medium %", min_value=0, max_value=max_m if max_m > 0 else 0, key="medium_pct", on_change=update_medium)
+            medium_pct = st.slider("Medium %", min_value=0, max_value=100, key="medium_pct", on_change=update_medium)
         with col_h:
-            hard_pct = st.slider("Hard %", min_value=0, max_value=max_h if max_h > 0 else 0, key="hard_pct", on_change=update_hard)
+            hard_pct = st.slider("Hard %", min_value=0, max_value=100, key="hard_pct", on_change=update_hard)
 
         current_pct = easy_pct + medium_pct + hard_pct
-
-        if current_pct < 100:
-             st.warning(f"⚠️ Current sum is **{current_pct}%**. Please adjust the sliders to use the remaining **{100 - current_pct}%**.")
-        elif current_pct > 100:
-             st.warning(f"⚠️ Current sum is **{current_pct}%**. It cannot exceed 100%.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
