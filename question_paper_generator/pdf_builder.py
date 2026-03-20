@@ -1,6 +1,6 @@
 import os
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, CondPageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 
@@ -87,11 +87,19 @@ def create_pdf(subject: str, topic: str, questions_data: dict[int, list[str]], o
     # Filter only marks that have questions generated
     active_marks = sorted([mark for mark in questions_data.keys() if questions_data[mark]])
 
+    # The height of a US Letter page is 792 points. 20% of 792 is ~158 points.
+    page_height = letter[1]
+    twenty_percent_height = page_height * 0.20
+
     for section_idx, mark in enumerate(active_marks):
         section_letter = get_section_letter(section_idx)
         questions = questions_data[mark]
         num_questions = len(questions)
         section_total_marks = num_questions * mark
+
+        # Force a page break if there's less than 20% of the page left
+        if section_idx > 0:
+            story.append(CondPageBreak(twenty_percent_height))
 
         story.append(Spacer(1, 15)) # Top margin for section
 
