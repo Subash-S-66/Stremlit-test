@@ -14,6 +14,17 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Hide Streamlit chrome for hosted app
+st.markdown("""
+<style>
+header {visibility: hidden;}
+footer {visibility: hidden;}
+[data-testid="stSidebar"] {display: none;}
+section.main > div {padding-top: 1rem;}
+</style>
+""", unsafe_allow_html=True)
+
+
 def init_session_state():
     """Initializes standard session state variables if they don't exist."""
     if "pdf_path" not in st.session_state:
