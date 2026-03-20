@@ -25,6 +25,10 @@ footer {visibility: hidden;}
 [data-testid="stDecoration"] {display: none;}
 [data-testid="stStatusWidget"] {display: none;}
 .stAppToolbar {display: none;}
+[data-testid="stFloatingActionButton"] {display: none;}
+[data-testid="stAppToolbar"] {display: none;}
+[data-testid="stActionButtonIcon"] {display: none;}
+[data-testid="stActionButton"] {display: none;}
 [data-testid="stSidebar"] {display: none;}
 section.main > div {padding-top: 1rem;}
 </style>
