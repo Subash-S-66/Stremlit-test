@@ -1,8 +1,8 @@
 import os
 import streamlit as st
 from config import Config
-from validator import validate_total, validate_mix, validate_inputs
-from utils import calculate_difficulty_distribution
+from validator import validate_total, validate_mix, validate_inputs, validate_marks_limit
+from utils import calculate_difficulty_distribution, calculate_total_marks
 from generator import generate_questions_for_mark
 from pdf_builder import create_pdf
 
@@ -78,14 +78,25 @@ with st.container():
     # --- Step 2: Question Distribution ---
     st.markdown('<h3 class="step-header">Step 2: Question Distribution</h3>', unsafe_allow_html=True)
 
-    total_questions = st.number_input(
-        "Total Number of Questions",
-        min_value=1,
-        max_value=Config.MAX_TOTAL_QUESTIONS,
-        value=10,
-        step=1,
-        help=f"Maximum allowed questions: {Config.MAX_TOTAL_QUESTIONS}"
-    )
+    col_q, col_m = st.columns(2)
+    with col_q:
+        total_questions = st.number_input(
+            "Total Number of Questions",
+            min_value=1,
+            max_value=Config.MAX_TOTAL_QUESTIONS,
+            value=10,
+            step=1,
+            help=f"Maximum allowed questions: {Config.MAX_TOTAL_QUESTIONS}"
+        )
+    with col_m:
+        max_total_marks = st.number_input(
+            "Maximum Total Marks",
+            min_value=1,
+            max_value=1000,
+            value=100,
+            step=1,
+            help="The sum of all generated questions' marks must not exceed this value."
+        )
 
     st.write(f"Distribute exactly **{total_questions}** questions across the following mark categories:")
 
@@ -109,7 +120,12 @@ with st.container():
     # Show real-time distribution warning if it doesn't match
     current_sum = sum(distribution.values())
     if current_sum != total_questions:
-        st.warning(f"⚠️ Your current distribution sums to **{current_sum}**. It must equal exactly **{total_questions}**.")
+        st.warning(f"⚠️ Your current distribution sums to **{current_sum}** questions. It must equal exactly **{total_questions}**.")
+
+    # Show real-time marks warning if it exceeds
+    current_marks = calculate_total_marks(distribution)
+    if current_marks > max_total_marks:
+        st.warning(f"⚠️ The current distributed questions amount to **{current_marks}** marks, which exceeds your maximum of **{max_total_marks}** marks.")
 
     # --- Step 3: Difficulty Settings ---
     st.markdown('<h3 class="step-header">Step 3: Difficulty Settings</h3>', unsafe_allow_html=True)
@@ -152,7 +168,13 @@ if generate_clicked:
         st.error(f"**Validation Error:** {msg_total}")
         st.stop()
 
-    # 3. Mix Validation
+    # 3. Marks Limit Validation
+    is_valid_marks, msg_marks = validate_marks_limit(max_total_marks, current_marks)
+    if not is_valid_marks:
+        st.error(f"**Validation Error:** {msg_marks}")
+        st.stop()
+
+    # 4. Mix Validation
     if difficulty == "Mix":
         is_valid_mix, msg_mix = validate_mix(easy_pct, medium_pct, hard_pct)
         if not is_valid_mix:

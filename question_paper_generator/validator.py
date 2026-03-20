@@ -35,3 +35,15 @@ def validate_inputs(subject: str, topic: str) -> tuple[bool, str]:
         return False, "Topic cannot be empty."
 
     return True, ""
+
+def validate_marks_limit(max_marks: int, calculated_marks: int) -> tuple[bool, str]:
+    """
+    Validates that the distributed marks do not exceed the set total maximum marks.
+    """
+    if max_marks <= 0:
+        return False, "Total marks must be greater than 0."
+
+    if calculated_marks > max_marks:
+        return False, f"The sum of generated marks ({calculated_marks}) exceeds the allowed total marks ({max_marks})."
+
+    return True, ""
