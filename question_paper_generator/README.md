@@ -12,17 +12,21 @@ A production-ready application that generates professional, university-level que
 2. **Install Requirements:**
    Make sure you have Python 3.9+ installed.
    ```bash
-   pip install -r requirements.txt
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   python -m pip install -r requirements.txt
+
+
    ```
 
-3. **Configure Environment:**
+1. **Configure Environment:**
    Copy the example environment file and insert your API key:
    ```bash
    cp .env.example .env
    ```
    Open `.env` and replace `your_api_key_here` with your actual Google Gemini API Key.
 
-4. **Run the Application:**
+2. **Run the Application:**
    ```bash
    streamlit run app.py
    ```
