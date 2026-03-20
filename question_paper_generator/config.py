@@ -11,8 +11,18 @@ def _get_secret(key: str, default: str | None = None) -> str | None:
         return val
     try:
         import streamlit as st
-        if key in st.secrets:
-            return st.secrets[key]
+        try:
+            secrets = st.secrets
+            # st.secrets can raise if not configured on Streamlit Cloud
+            if hasattr(secrets, "get"):
+                val = secrets.get(key)
+                if val:
+                    return val
+            else:
+                if key in secrets:
+                    return secrets[key]
+        except Exception:
+            pass
     except Exception:
         pass
     return default
