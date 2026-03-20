@@ -19,6 +19,12 @@ st.markdown("""
 <style>
 header {visibility: hidden;}
 footer {visibility: hidden;}
+#MainMenu {visibility: hidden;}
+[data-testid="stHeader"] {display: none;}
+[data-testid="stToolbar"] {display: none;}
+[data-testid="stDecoration"] {display: none;}
+[data-testid="stStatusWidget"] {display: none;}
+.stAppToolbar {display: none;}
 [data-testid="stSidebar"] {display: none;}
 section.main > div {padding-top: 1rem;}
 </style>
