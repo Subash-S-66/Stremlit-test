@@ -11,7 +11,7 @@ def init_gemini():
         raise ValueError("Valid Gemini API Key not found in environment variables. Please check your .env file.")
     genai.configure(api_key=api_key)
 
-def build_prompt(subject: str, topic: str, mark: int, count: int, difficulty_info) -> str:
+def build_prompt(subject: str, topic: str, mark: int, count: int, difficulty_info, is_mcq: bool = False) -> str:
     """
     Constructs the prompt for Gemini to generate the exact number of questions.
     `difficulty_info` should either be a string (e.g., "Easy") or a dictionary mapping
@@ -35,19 +35,35 @@ STRICT RULES - YOU MUST FOLLOW THESE OR FAIL:
 2. Ensure there is NO repetition among the questions.
 3. The questions must be of strict exam-level quality. Include conceptual and application-based problems, not just trivial definitions.
 4. DO NOT include any introductory greetings, concluding remarks, or metadata (e.g., "Here are the questions:" or "End of paper").
-5. Write each individual question strictly on a single continuous line if possible, or format it cleanly.
-6. Number the questions sequentially starting from 1 (e.g., "1. ", "2. ", etc.).
+"""
+
+    if is_mcq:
+        prompt += "5. Format EACH question as a Multiple Choice Question (MCQ) with exactly 4 options (A, B, C, D) on separate lines.\n"
+    else:
+        prompt += "5. Write each individual question cleanly. Do not use multiple choices.\n"
+
+    prompt += """
+6. VERY IMPORTANT: You MUST separate EVERY INDIVIDUAL QUESTION block (including its options if it's an MCQ) with the exact delimiter `###`. Do not use any numbers to start the question. Just write the text.
+Example format:
+What is the capital of France?
+A) London
+B) Berlin
+C) Paris
+D) Rome
+###
+Explain the process of photosynthesis.
+###
 """
     return prompt
 
-def generate_questions_for_mark(subject: str, topic: str, mark: int, count: int, difficulty_info) -> list[str]:
+def generate_questions_for_mark(subject: str, topic: str, mark: int, count: int, difficulty_info, is_mcq: bool = False) -> list[str]:
     """
     Makes the API call to Gemini to generate questions for a specific mark category.
     Implements retry logic up to Config.MAX_RETRIES.
     """
     init_gemini()
     model = genai.GenerativeModel(Config.GEMINI_MODEL)
-    prompt = build_prompt(subject, topic, mark, count, difficulty_info)
+    prompt = build_prompt(subject, topic, mark, count, difficulty_info, is_mcq)
 
     for attempt in range(Config.MAX_RETRIES + 1):
         try:
@@ -55,29 +71,30 @@ def generate_questions_for_mark(subject: str, topic: str, mark: int, count: int,
             if not response.text:
                 raise ValueError("Received empty response from Gemini.")
 
-            # Basic cleanup: split by newlines, filter empty lines
-            raw_lines = [line.strip() for line in response.text.split('\n') if line.strip()]
+            # Split by the mandatory delimiter instead of newlines.
+            raw_blocks = response.text.split("###")
 
             clean_questions = []
-            for line in raw_lines:
-                # Use regex to strip leading numbers, dots, dashes, and asterisks.
-                # E.g., "1. What is...", "* What is...", "- 1. What is..." -> "What is..."
-                # This ensures we don't accidentally strip valid numbers inside the text itself
-                # that `lstrip` might if used improperly.
-                cleaned = re.sub(r'^[\d\s\.\-\*]+', '', line).strip()
+            for block in raw_blocks:
+                cleaned = block.strip()
+                if not cleaned:
+                    continue
+
+                # Remove any accidental leading numbers/bullets that the model might have still added
+                # But be careful not to strip valid lines if it's an MCQ block. We only strip the very first line of the block.
+                lines = cleaned.split("\n")
+                if lines:
+                    lines[0] = re.sub(r'^[\d\s\.\-\*]+', '', lines[0]).strip()
+                    cleaned = "\n".join(lines).strip()
+
                 if cleaned:
                     clean_questions.append(cleaned)
 
-            # If the model groups a single question into multiple lines,
-            # this might split them. However, our prompt requests "each individual question strictly on a single continuous line".
-            # For robustness, we return exactly what the model gave us cleaned up.
-
             # If the API returned zero valid questions, raise error to trigger retry
             if not clean_questions:
-                raise ValueError("Failed to parse valid questions from the response.")
+                raise ValueError("Failed to parse valid questions from the response. Missing delimiters.")
 
             # If the model returned more than requested (rare but happens), truncate.
-            # If less, we take what we have (retry could be risky if it consistently under-generates).
             if len(clean_questions) > count:
                 clean_questions = clean_questions[:count]
 

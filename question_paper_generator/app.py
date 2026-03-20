@@ -21,7 +21,31 @@ def init_session_state():
     if "is_generating" not in st.session_state:
         st.session_state.is_generating = False
 
+    # Initialize mix percentages
+    if "easy_pct" not in st.session_state:
+        st.session_state.easy_pct = 34
+    if "medium_pct" not in st.session_state:
+        st.session_state.medium_pct = 33
+    if "hard_pct" not in st.session_state:
+        st.session_state.hard_pct = 33
+
 init_session_state()
+
+def update_easy():
+    # Enforce limit: easy can't be more than what's left
+    remaining = 100 - (st.session_state.medium_pct + st.session_state.hard_pct)
+    if st.session_state.easy_pct > remaining:
+        st.session_state.easy_pct = remaining
+
+def update_medium():
+    remaining = 100 - (st.session_state.easy_pct + st.session_state.hard_pct)
+    if st.session_state.medium_pct > remaining:
+        st.session_state.medium_pct = remaining
+
+def update_hard():
+    remaining = 100 - (st.session_state.easy_pct + st.session_state.medium_pct)
+    if st.session_state.hard_pct > remaining:
+        st.session_state.hard_pct = remaining
 
 # Custom CSS for better UI
 st.markdown("""
@@ -104,6 +128,8 @@ with st.container():
     cols = st.columns(len(Config.ALLOWED_MARKS))
     distribution = {}
 
+    is_mcq = False
+
     for idx, mark in enumerate(Config.ALLOWED_MARKS):
         with cols[idx]:
             init_val = total_questions if idx == 0 else 0
@@ -116,6 +142,10 @@ with st.container():
                 key=f"mark_{mark}"
             )
             distribution[mark] = count
+
+            # If this is the 1-mark section, add the MCQ checkbox
+            if mark == 1:
+                is_mcq = st.checkbox("Multiple Choice", value=True, help="Generate 1-mark questions as MCQs")
 
     # Show real-time distribution warning if it doesn't match
     current_sum = sum(distribution.values())
@@ -134,18 +164,27 @@ with st.container():
 
     easy_pct, medium_pct, hard_pct = 0, 0, 0
     if difficulty == "Mix":
-        st.info("Adjust the sliders below to set the difficulty distribution. Total must equal 100%.")
+        st.info("Adjust the sliders below to set the difficulty distribution. The maximum value for each slider adjusts based on the other two sliders.")
         col_e, col_m, col_h = st.columns(3)
+
+        # Calculate max allowed for each based on current state of the others
+        max_e = 100 - (st.session_state.medium_pct + st.session_state.hard_pct)
+        max_m = 100 - (st.session_state.easy_pct + st.session_state.hard_pct)
+        max_h = 100 - (st.session_state.easy_pct + st.session_state.medium_pct)
+
         with col_e:
-            easy_pct = st.slider("Easy %", min_value=0, max_value=100, value=34, step=1)
+            easy_pct = st.slider("Easy %", min_value=0, max_value=max_e if max_e > 0 else 0, key="easy_pct", on_change=update_easy)
         with col_m:
-            medium_pct = st.slider("Medium %", min_value=0, max_value=100, value=33, step=1)
+            medium_pct = st.slider("Medium %", min_value=0, max_value=max_m if max_m > 0 else 0, key="medium_pct", on_change=update_medium)
         with col_h:
-            hard_pct = st.slider("Hard %", min_value=0, max_value=100, value=33, step=1)
+            hard_pct = st.slider("Hard %", min_value=0, max_value=max_h if max_h > 0 else 0, key="hard_pct", on_change=update_hard)
 
         current_pct = easy_pct + medium_pct + hard_pct
-        if current_pct != 100:
-            st.warning(f"⚠️ Current sum is **{current_pct}%**. It must equal exactly **100%**.")
+
+        if current_pct < 100:
+             st.warning(f"⚠️ Current sum is **{current_pct}%**. Please adjust the sliders to use the remaining **{100 - current_pct}%**.")
+        elif current_pct > 100:
+             st.warning(f"⚠️ Current sum is **{current_pct}%**. It cannot exceed 100%.")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -205,7 +244,8 @@ if generate_clicked:
             else:
                 diff_info = difficulty
 
-            questions = generate_questions_for_mark(subject, topic, mark, count, diff_info)
+            generate_mcq = is_mcq if mark == 1 else False
+            questions = generate_questions_for_mark(subject, topic, mark, count, diff_info, generate_mcq)
             questions_data[mark] = questions
 
             # Update progress
